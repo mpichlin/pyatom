@@ -354,88 +354,35 @@ class Utils(object):
         return windows
 
     def _get_title(self, obj):
-        title=""
-        role=""
-        try:
-            role=obj.AXRole
-            desc=obj.AXRoleDescription
-            if re.match("(AXStaticText|AXRadioButton|AXButton)",
-                        role, re.M | re.U | re.L) and \
-                    (desc == "text" or desc == "radio button" or \
-                         desc == "button") and obj.AXValue:
-                return obj.AXValue
-        except:
-            pass
-        try:
-            checkBox=re.match("AXCheckBox", role, re.M | re.U | re.L)
-            if checkBox:
-                # Instruments doesn't have AXTitle, AXValue for AXCheckBox
-                try:
-                    title=obj.AXHelp
-                except (atomac._a11y.ErrorUnsupported, atomac._a11y.Error):
-                    pass
-            if not title:
-                title=obj.AXTitle
-        except (atomac._a11y.ErrorUnsupported, atomac._a11y.Error):
+        def get_attribute_value(obj, attr):
             try:
-                text=re.match("(AXTextField|AXTextArea)", role,
-                                re.M | re.U | re.L)
-                if text:
-                    title=obj.AXFilename
-                else:
-                    if not re.match("(AXTabGroup)", role,
-                                    re.M | re.U | re.L):
-                        # Tab group has AXRadioButton as AXValue
-                        # So skip it
-                        if re.match("(AXScrollBar)", role,
-                                    re.M | re.U | re.L):
-                            # ScrollBar value is between 0 to 1
-                            # which is used to get the current location
-                            # of the ScrollBar, rather than the object name
-                            # Let us have the title as empty string and
-                            # refer the ScrollBar as scbr0 (Vertical),
-                            # scbr1 (Horizontal)
-                            title=""
-                        else:
-                            title=obj.AXValue
+                return eval("obj.AX"+attr)
             except (atomac._a11y.ErrorUnsupported, atomac._a11y.Error):
-                if re.match("AXButton", role,
-                            re.M | re.U | re.L):
-                    try:
-                        title=obj.AXDescription
-                        if title:
-                            return title
-                    except (atomac._a11y.ErrorUnsupported, atomac._a11y.Error):
-                        pass
-                try:
-                    if not re.match("(AXList|AXTable)", role,
-                                    re.M | re.U | re.L):
-                        # List have description as list
-                        # So skip it
-                        title=obj.AXRoleDescription
-                except (atomac._a11y.ErrorUnsupported, atomac._a11y.Error):
-                    pass
-        if not title:
-            if re.match("(AXButton|AXCheckBox)", role,
-                        re.M | re.U | re.L):
-                try:
-                    title=obj.AXRoleDescription
-                    if title:
-                       return title
-                except (atomac._a11y.ErrorUnsupported, atomac._a11y.Error):
-                    pass
-            elif re.match("(AXStaticText)", role,
-                          re.M | re.U | re.L):
-                try:
-                    title=obj.AXValue
-                    if title:
-                       return title
-                except (atomac._a11y.ErrorUnsupported, atomac._a11y.Error):
-                    pass
-            # Noticed that some of the above one assigns title as None
-            # in that case return empty string
+                return ''
+
+        def find_title(obj, attr_list):
+            for attr in attr_list:
+                attr_val = get_attribute_value(obj, attr)
+                if attr_val:
+                    return attr_val
             return ""
-        return title
+
+        role=get_attribute_value(obj, "Role")
+        if role == "AXStaticText" or role == "AXRadioButton":
+            return find_title(obj, ["Value", "Title", "RoleDescription"])
+        if role == "AXButton":
+            return find_title(obj, ["Value", "Title", "Description",
+                                    "RoleDescription"])
+        if role == "AXCheckBox":
+            return find_title(obj,
+                              ["Help", "Title", "Value", "RoleDescription"])
+        if role =="AXTextField" or "AXTextArea":
+            return find_title(obj, ["Title", "Filename", "RoleDescription"])
+        if role == "AXScrollBar" or role == "AXTabGroup":
+            return find_title(obj, ["Title", "RoleDescription"])
+        if role == "AXList" or role == "AXTable":
+            return find_title(obj, ["Title"])
+        return find_title(obj, ["Title", "Value", "RoleDescription"])
 
     def _get_role(self, obj):
         role=""
