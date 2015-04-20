@@ -367,12 +367,25 @@ class Utils(object):
                     return attr_val
             return ""
 
+        def find_title_with_value_preferred(obj, control_role, attr_list):
+            role_desc=get_attribute_value(obj, "RoleDescription")
+            value=get_attribute_value(obj, "Value")
+            if role_desc == control_role and value:
+                return value
+            return find_title(obj, attr_list)
+
         role=get_attribute_value(obj, "Role")
-        if role == "AXStaticText" or role == "AXRadioButton":
-            return find_title(obj, ["Value", "Title", "RoleDescription"])
+        if role == "AXStaticText":
+            return find_title_with_value_preferred(
+                obj, "text", ["Title", "Value", "RoleDescription"])
+        if role == "AXRadioButton":
+            return find_title_with_value_preferred(
+                obj, "radio button", ["Title", "Value", "RoleDescription"])
         if role == "AXButton":
-            return find_title(obj, ["Value", "Title", "Description",
-                                    "RoleDescription"])
+            return find_title_with_value_preferred(
+                obj,
+                "button",
+                ["Title", "Value", "Description", "RoleDescription"])
         if role == "AXCheckBox":
             return find_title(obj,
                               ["Help", "Title", "Value", "RoleDescription"])
